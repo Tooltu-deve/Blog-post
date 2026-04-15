@@ -1,5 +1,5 @@
 import { IsEnum, IsNotEmpty, IsOptional, IsString, IsUrl } from "class-validator";
-import { Status } from '../../../generated/client/enums';
+import { Status } from '@prisma/client';
 
 export class CreatePostDto {
     @IsString()

@@ -1,5 +1,5 @@
 import { IsNotEmpty, IsString, MaxLength, MinLength } from "class-validator";
-import { LoginDto } from "./login.dto";
+import { LoginDto } from "./login.dto.js";
 
 
 export class RegisterDto extends LoginDto {

@@ -1,14 +1,14 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { CreateCommentDto } from './dto/create-comment.dto';
-import { CommentModel } from 'generated/client/models/Comment';
-import { Role } from '../common/enums/role.enum';
+import { PrismaService } from '../prisma/prisma.service.js';
+import { CreateCommentDto } from './dto/create-comment.dto.js';
+import { Comment } from '@prisma/client';
+import { Role } from '../common/enums/role.enum.js';
 
 @Injectable()
 export class CommentsService {
     constructor(private prisma: PrismaService) {}
 
-    async create (data: CreateCommentDto, userId: string): Promise<CommentModel> {
+    async create (data: CreateCommentDto, userId: string): Promise<Comment> {
         const { content, postId } = data;
         
         const comment = await this.prisma.comment.create({
@@ -21,7 +21,7 @@ export class CommentsService {
         return comment;
     }
 
-    async findAll(postId: string): Promise<CommentModel[]> {
+    async findAll(postId: string): Promise<Comment[]> {
         return this.prisma.comment.findMany({
             where: { postId },
             include: {
@@ -35,7 +35,7 @@ export class CommentsService {
         });
     }
 
-    async delete(id: string, userId: string, userRole: Role): Promise<void> {
+    async delete(id: string, userId: string, userRole: Role.ADMIN): Promise<void> {
         const comment = await this.prisma.comment.findUnique({
             where: { id },
         });

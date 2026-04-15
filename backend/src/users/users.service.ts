@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { UserModel } from '../../generated/client/models/User';
-import { CreateUserDto } from './dto/create-user.dto';
+import { PrismaService } from '../prisma/prisma.service.js';
+import { User } from '@prisma/client';
+import { CreateUserDto } from './dto/create-user.dto.js';
 import * as bcrypt from 'bcrypt';
 
 
@@ -10,7 +10,7 @@ import * as bcrypt from 'bcrypt';
 export class UsersService {
     constructor(private prisma: PrismaService) {}
 
-    async findByEmail(email: string): Promise<UserModel | null> {
+    async findByEmail(email: string): Promise<User | null> {
         const user = await this.prisma.user.findUnique({
             where: { email }
         });
@@ -19,7 +19,7 @@ export class UsersService {
     }
 
 
-    async create(data: CreateUserDto): Promise<UserModel> {
+    async create(data: CreateUserDto): Promise<User> {
         const { firstName, lastName, email, password } = data;
 
         const existingUser = await this.prisma.user.findUnique({

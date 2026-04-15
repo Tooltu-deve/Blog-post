@@ -1,8 +1,8 @@
 import { Controller, Post, Body, Req, Param, Get, Delete, UseGuards, Query } from '@nestjs/common';
-import { CommentsService } from './comments.service';
-import { CommentModel } from 'generated/client/models/Comment';
-import { CreateCommentDto } from './dto/create-comment.dto';
-import { JwtAuthGuard } from '../auth/auth.guard';
+import { CommentsService } from './comments.service.js';
+import { Comment } from '@prisma/client';
+import { CreateCommentDto } from './dto/create-comment.dto.js';
+import { JwtAuthGuard } from '../auth/auth.guard.js';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
 @ApiTags('comments')
@@ -14,12 +14,12 @@ export class CommentsController {
     @UseGuards(JwtAuthGuard)
     @ApiBearerAuth()
     @Post()
-    async create(@Body() createCommentDto: CreateCommentDto, @Req() req): Promise<CommentModel> {
+    async create(@Body() createCommentDto: CreateCommentDto, @Req() req): Promise<Comment> {
         return this.commentsService.create(createCommentDto, req.user.id);
     }
 
     @Get()
-    async findAll(@Query('postId') postId: string): Promise<CommentModel[]> {
+    async findAll(@Query('postId') postId: string): Promise<Comment[]> {
         return this.commentsService.findAll(postId);
     }
 

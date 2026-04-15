@@ -1,16 +1,16 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { PostModel } from 'generated/client/models/Post';
-import { CreatePostDto } from './dto/create-post.dto';
-import { UpdatePostDto } from './dto/update-post.dto';
-import { Role } from '../common/enums/role.enum';
+import { PrismaService } from '../prisma/prisma.service.js';
+import { Post } from '@prisma/client';
+import { CreatePostDto } from './dto/create-post.dto.js';
+import { UpdatePostDto } from './dto/update-post.dto.js';
+import { Role } from '../common/enums/role.enum.js';
 import slugify from 'slugify';
 
 @Injectable()
 export class PostsService {
     constructor(private prisma: PrismaService) {}
 
-    async findAll(): Promise<PostModel[]> {
+    async findAll(): Promise<Post[]> {
         return this.prisma.post.findMany({
             where: { status: 'PUBLISHED' },
             include: { user: { select: { firstName: true, lastName: true } } }
@@ -23,7 +23,7 @@ export class PostsService {
         return post;
     }
         
-    async create(data: CreatePostDto, userId: string): Promise<PostModel> {
+    async create(data: CreatePostDto, userId: string): Promise<Post> {
         const { title, thumbnail, content, status } = data;
         const slug = slugify(title, { lower: true, strict: true }) + '-' + Date.now();
         return this.prisma.post.create({
@@ -38,7 +38,7 @@ export class PostsService {
         });
     }
 
-    async update(id: string, data: UpdatePostDto, userId: string, userRole: Role): Promise<PostModel> {
+    async update(id: string, data: UpdatePostDto, userId: string, userRole: Role.ADMIN): Promise<Post> {
         const post = await this.findOne(id);
         if(post.authorId !== userId && userRole !== Role.ADMIN){
             throw new ForbiddenException('You are not allowed to update this post');
@@ -58,7 +58,7 @@ export class PostsService {
         });
     }
 
-    async delete(id: string, userId: string, userRole: Role): Promise<void> {
+    async delete(id: string, userId: string, userRole: Role.ADMIN): Promise<void> {
         const post = await this.findOne(id);
         if (post.authorId !== userId && userRole !== Role.ADMIN) {
             throw new ForbiddenException('You are not allowed to delete this post');
