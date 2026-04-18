@@ -74,9 +74,9 @@ module "secrets" {
 module "rds" {
   source = "./modules/rds"
 
-  name_prefix       = local.name_prefix
-  db_name           = var.db_name
-  db_username       = var.db_username
+  name_prefix             = local.name_prefix
+  db_name                 = var.db_name
+  db_username             = var.db_username
   db_instance_class       = var.db_instance_class
   subnet_ids              = module.networking.data_subnet_ids
   security_group_id       = module.networking.rds_security_group_id
@@ -87,10 +87,10 @@ module "rds" {
 module "alb" {
   source = "./modules/alb"
 
-  name_prefix       = local.name_prefix
-  vpc_id            = module.networking.vpc_id
-  public_subnet_ids = module.networking.public_subnet_ids
-  security_group_id = module.networking.alb_security_group_id
+  name_prefix         = local.name_prefix
+  vpc_id              = module.networking.vpc_id
+  public_subnet_ids   = module.networking.public_subnet_ids
+  security_group_id   = module.networking.alb_security_group_id
   backend_port        = var.backend_port
   frontend_port       = var.frontend_port
   acm_certificate_arn = var.acm_certificate_arn
@@ -99,20 +99,20 @@ module "alb" {
 module "ecs" {
   source = "./modules/ecs"
 
-  name_prefix    = local.name_prefix
-  aws_region     = var.aws_region
-  vpc_id         = module.networking.vpc_id
-  private_subnet_ids   = module.networking.app_subnet_ids
+  name_prefix           = local.name_prefix
+  aws_region            = var.aws_region
+  vpc_id                = module.networking.vpc_id
+  private_subnet_ids    = module.networking.app_subnet_ids
   ecs_security_group_id = module.networking.ecs_security_group_id
 
   # Container config
-  backend_image  = "${module.ecr.backend_repository_url}:latest"
-  frontend_image = "${module.ecr.frontend_repository_url}:latest"
-  backend_port   = var.backend_port
-  frontend_port  = var.frontend_port
-  backend_cpu    = var.backend_cpu
-  backend_memory = var.backend_memory
-  frontend_cpu   = var.frontend_cpu
+  backend_image   = "${module.ecr.backend_repository_url}:latest"
+  frontend_image  = "${module.ecr.frontend_repository_url}:latest"
+  backend_port    = var.backend_port
+  frontend_port   = var.frontend_port
+  backend_cpu     = var.backend_cpu
+  backend_memory  = var.backend_memory
+  frontend_cpu    = var.frontend_cpu
   frontend_memory = var.frontend_memory
 
   # Secrets
@@ -135,15 +135,15 @@ module "codedeploy" {
   name_prefix = local.name_prefix
 
   # ECS
-  ecs_cluster_name    = module.ecs.cluster_name
+  ecs_cluster_name      = module.ecs.cluster_name
   backend_service_name  = module.ecs.backend_service_name
   frontend_service_name = module.ecs.frontend_service_name
 
   # ALB
   alb_listener_arn = module.alb.listener_arn
 
-  backend_tg_blue_name  = module.alb.backend_tg_blue_name
-  backend_tg_green_name = module.alb.backend_tg_green_name
+  backend_tg_blue_name   = module.alb.backend_tg_blue_name
+  backend_tg_green_name  = module.alb.backend_tg_green_name
   frontend_tg_blue_name  = module.alb.frontend_tg_blue_name
   frontend_tg_green_name = module.alb.frontend_tg_green_name
 }
