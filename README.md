@@ -16,9 +16,9 @@ Users can register accounts, write posts (draft or published), and comment on pu
 
 ## Architecture
 
-> **Architecture diagram**
-> <!-- TODO: attach architecture diagram image here -->
-> `[public/architecture.png]`
+**Architecture diagram**
+
+![public/architecture.png](./public/architecture.png)
 
 ```
 Internet → ALB (HTTPS :443)
