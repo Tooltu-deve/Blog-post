@@ -9,12 +9,7 @@ describe('HealthController', () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [HealthController],
       providers: [
-        {
-          provide: PrismaService,
-          useValue: {
-            $queryRaw: jest.fn().mockResolvedValue([{ '?column?': 1 }]),
-          },
-        },
+        { provide: PrismaService, useValue: {} },
       ],
     }).compile();
 
