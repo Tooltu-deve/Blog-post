@@ -1,0 +1,9 @@
+project_name  = "blog"
+environment   = "dev"
+aws_region    = "ap-southeast-1"
+db_name       = "blogdb"
+db_username   = "blogadmin"
+
+# HTTPS — requires a domain you own + ACM certificate
+domain_name         = "blog.example.com"
+acm_certificate_arn = "arn:aws:acm:ap-southeast-1:ACCOUNT_ID:certificate/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
