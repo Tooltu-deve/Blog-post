@@ -1,0 +1,108 @@
+name: Deploy Frontend
+
+on:
+  push:
+    branches: [main]
+    paths: [frontend/**]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ap-southeast-1
+  ECR_REPO: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-southeast-1.amazonaws.com/blog-dev-frontend
+  ECS_CLUSTER: blog-dev-cluster
+  TASK_FAMILY: blog-dev-frontend
+  CODEDEPLOY_APP: blog-dev-deploy
+  CODEDEPLOY_DG: blog-dev-frontend-dg
+  CONTAINER_NAME: blog-dev-frontend
+  CONTAINER_PORT: "80"
+
+jobs:
+  deploy:
+    name: Build & Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build & push Docker image
+        run: |
+          IMAGE_TAG=${{ github.sha }}
+          docker build \
+            --build-arg VITE_API_URL=https://${{ vars.DOMAIN_NAME }}/api \
+            -t $ECR_REPO:$IMAGE_TAG \
+            frontend/
+          docker push $ECR_REPO:$IMAGE_TAG
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+
+      # ── Register New Task Definition ────────────────────────
+      - name: Register new task definition
+        run: |
+          TASK_DEF=$(aws ecs describe-task-definition \
+            --task-definition $TASK_FAMILY \
+            --query 'taskDefinition')
+
+          NEW_TASK_DEF=$(echo $TASK_DEF | jq \
+            --arg IMAGE "$ECR_REPO:$IMAGE_TAG" \
+            --arg NAME "$CONTAINER_NAME" \
+            '.containerDefinitions |= map(if .name == $NAME then .image = $IMAGE else . end) |
+             del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)')
+
+          NEW_ARN=$(aws ecs register-task-definition \
+            --cli-input-json "$NEW_TASK_DEF" \
+            --query 'taskDefinition.taskDefinitionArn' \
+            --output text)
+
+          echo "NEW_TASK_DEF_ARN=$NEW_ARN" >> $GITHUB_ENV
+          echo "New task definition: $NEW_ARN"
+
+      # ── Blue/Green Deployment via CodeDeploy ────────────────
+      - name: Create CodeDeploy deployment
+        run: |
+          APPSPEC=$(cat <<EOF
+          {
+            "version": 0.0,
+            "Resources": [{
+              "TargetService": {
+                "Type": "AWS::ECS::Service",
+                "Properties": {
+                  "TaskDefinition": "$NEW_TASK_DEF_ARN",
+                  "LoadBalancerInfo": {
+                    "ContainerName": "$CONTAINER_NAME",
+                    "ContainerPort": $CONTAINER_PORT
+                  }
+                }
+              }
+            }]
+          }
+          EOF
+          )
+
+          DEPLOYMENT_ID=$(aws deploy create-deployment \
+            --application-name $CODEDEPLOY_APP \
+            --deployment-group-name $CODEDEPLOY_DG \
+            --revision "{
+              \"revisionType\": \"AppSpecContent\",
+              \"appSpecContent\": {
+                \"content\": $(echo "$APPSPEC" | jq -Rs .)
+              }
+            }" \
+            --query 'deploymentId' \
+            --output text)
+
+          echo "Deployment started: $DEPLOYMENT_ID"
+          aws deploy wait deployment-successful --deployment-id $DEPLOYMENT_ID
+          echo "Deployment completed successfully"
