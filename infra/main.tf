@@ -9,13 +9,13 @@ terraform {
   }
 
   # Uncomment after creating the S3 bucket and DynamoDB table (one-time bootstrap)
-  # backend "s3" {
-  #   bucket         = "blog-terraform-state-ACCOUNT_ID"
-  #   key            = "project2/terraform.tfstate"
-  #   region         = "ap-southeast-1"
-  #   dynamodb_table = "terraform-lock"
-  #   encrypt        = true
-  # }
+  backend "s3" {
+    bucket         = "blog-terraform-state-252773257724"
+    key            = "project2/terraform.tfstate"
+    region         = "ap-southeast-1"
+    dynamodb_table = "terraform-lock"
+    encrypt        = true
+  }
 }
 
 provider "aws" {
