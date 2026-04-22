@@ -23,7 +23,8 @@ resource "aws_db_instance" "main" {
   username = var.db_username
 
   # Credentials — RDS manages password in Secrets Manager with auto-rotation
-  manage_master_user_password = true
+  manage_master_user_password   = true
+  master_user_secret_kms_key_id = "alias/aws/secretsmanager"
 
   # Network
   db_subnet_group_name   = aws_db_subnet_group.main.name
