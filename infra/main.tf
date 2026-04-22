@@ -13,7 +13,7 @@ terraform {
     bucket         = "blog-terraform-state-252773257724"
     key            = "project2/terraform.tfstate"
     region         = "ap-southeast-1"
-    dynamodb_table = "terraform-lock"
+    use_lockfile   = true
     encrypt        = true
   }
 }
