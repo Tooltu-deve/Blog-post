@@ -24,7 +24,7 @@ env:
 jobs:
   deploy:
     name: Build, Migrate & Deploy
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
 
     steps:
       - name: Checkout
@@ -47,7 +47,7 @@ jobs:
           npx prisma generate
           npm test
 
-      - name: Build & push Docker image
+      - name: Build & push Docker image (ARM64 native)
         run: |
           IMAGE_TAG=${{ github.sha }}
           docker build -t $ECR_REPO:$IMAGE_TAG backend/

@@ -38,14 +38,21 @@ jobs:
       - name: Login to ECR
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build & push Docker image
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build & push Docker image (ARM64)
         run: |
           IMAGE_TAG=${{ github.sha }}
-          docker build \
+          docker buildx build \
+            --platform linux/arm64 \
             --build-arg VITE_API_URL=https://${{ vars.DOMAIN_NAME }}/api \
             -t $ECR_REPO:$IMAGE_TAG \
+            --push \
             frontend/
-          docker push $ECR_REPO:$IMAGE_TAG
           echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
 
       # ── Register New Task Definition ────────────────────────
