@@ -76,7 +76,7 @@ jobs:
         if: steps.plan.outcome == 'failure'
         run: exit 1
 
-      # Apply only on push to main (not PRs)
+      # Apply on push to main or manual dispatch (not on PRs)
       - name: Terraform Apply
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         run: terraform apply -auto-approve tfplan
