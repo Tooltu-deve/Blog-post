@@ -6,13 +6,14 @@ Users can register accounts, write posts (draft or published), and comment on pu
 
 ---
 
-<!-- ## Demo
+## Demo
 
-> **Short demo video**
-> <!-- TODO: attach demo video here -->
-<!-- > `[demo.mp4]` -->
+**Short demo video**
+<!-- TODO: attach demo video here -->
+<video src="public/demo.mov" width="100%" controls></video>
 
---- -->
+
+<!-- --- --> -->
 
 ## Architecture
 
