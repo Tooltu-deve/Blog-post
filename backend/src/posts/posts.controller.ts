@@ -4,6 +4,7 @@ import { PostsService } from './posts.service.js';
 import { CreatePostDto } from './dto/create-post.dto.js';
 import { UpdatePostDto } from './dto/update-post.dto.js';
 import { JwtAuthGuard } from '../auth/auth.guard.js';
+import { OptionalJwtAuthGuard } from '../auth/optional-jwt.guard.js';
 
 @ApiTags('posts')
 @Controller('posts')
@@ -16,8 +17,9 @@ export class PostsController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.postsService.findOne(id);
+  @UseGuards(OptionalJwtAuthGuard)
+  findOne(@Param('id') id: string, @Request() req) {
+    return this.postsService.findOne(id, req.user?.id);
   }
 
   @Post()

@@ -17,9 +17,16 @@ export class PostsService {
         });
     }
 
-    async findOne(id: string) {
+    async findOne(id: string, viewerId?: string) {
         const post = await this.prisma.post.findUnique({ where: { id } });
         if (!post) throw new NotFoundException('Post not found');
+
+        if (post.status === 'PUBLISHED' && viewerId !== post.authorId) {
+            return this.prisma.post.update({
+                where: { id },
+                data: { viewCount: { increment: 1 } },
+            });
+        }
         return post;
     }
         

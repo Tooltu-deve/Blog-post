@@ -48,6 +48,7 @@ model Post {
   thumbnail   String?
   content     String
   status      Status    @default(DRAFT)
+  viewCount   Int       @default(0)
   authorId    String
   user        User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
   createdAt   DateTime  @default(now())

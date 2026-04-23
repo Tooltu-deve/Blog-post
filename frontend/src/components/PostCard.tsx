@@ -28,7 +28,7 @@ export default function PostCard({ post }: Props) {
       )}
       <div className="post-card-body">
         <p className="post-card-meta">
-          {authorName} · {date}
+          {authorName} · {date} · 👁 {post.viewCount}
         </p>
         <h2 className="post-card-title">
           <Link to={`/posts/${post.id}`}>{post.title}</Link>

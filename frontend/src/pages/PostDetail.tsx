@@ -68,7 +68,7 @@ export default function PostDetail() {
 
         <header className="post-detail-header">
           <p className="post-detail-meta">
-            {authorName} · {date}
+            {authorName} · {date} · 👁 {post.viewCount}
           </p>
           <h1>{post.title}</h1>
 

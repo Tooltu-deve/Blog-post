@@ -13,6 +13,7 @@ export interface Post {
   content: string;
   thumbnail: string | null;
   status: 'DRAFT' | 'PUBLISHED';
+  viewCount: number;
   authorId: string;
   createdAt: string;
   user?: {
