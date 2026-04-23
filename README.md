@@ -8,12 +8,11 @@ Users can register accounts, write posts (draft or published), and comment on pu
 
 ## Demo
 
-**Short demo video**
-<!-- TODO: attach demo video here -->
-<video src="public/demo.mov" width="100%" controls></video>
+**Short demo**
+
+![Demo](public/demo.gif)
 
 
-<!-- --- --> -->
 
 ## Architecture
 
@@ -328,6 +327,30 @@ Swagger UI is available at `https://yourdomain.com/docs` after deployment, or at
 | `POST` | `/api/comments` | JWT | Add comment |
 | `DELETE` | `/api/comments/:id` | JWT | Delete comment (author/admin) |
 | `GET` | `/api/health` | — | Database health check |
+
+---
+
+## Cost
+
+Approximate monthly cost in `ap-southeast-1`, on-demand:
+
+| Service | Monthly |
+|---------|---------|
+| NAT Gateway (1 instance) | $43 |
+| RDS Multi-AZ `db.t4g.micro` + 20GB gp3 | $36 |
+| RDS Proxy (2 vCPU source) | $22 |
+| ALB + LCU | $21 |
+| ECS Fargate ARM64 (2 tasks × 0.25 vCPU / 0.5 GB) | $14 |
+| Secrets Manager (3 secrets), ECR, CloudWatch, S3/DynamoDB | ~$4 |
+| **Total** | **~$140 / month** |
+
+NAT Gateway + RDS Multi-AZ + RDS Proxy dominate (~61% of the bill). This project prioritizes production patterns over cost, but if you want a cheaper variant:
+
+- Single-AZ RDS → −$18/mo
+- VPC Endpoints instead of NAT Gateway → −$16/mo net
+- Drop RDS Proxy → −$22/mo
+- Fargate Spot → −$9/mo
+- **Combined optimized target: ~$60/month**
 
 ---
 
