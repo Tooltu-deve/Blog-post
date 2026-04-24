@@ -45,7 +45,7 @@ ECS Tasks (app subnets) → RDS Proxy → RDS PostgreSQL (data subnets, no inter
 **Backend**
 - [NestJS 11](https://nestjs.com/) — modular Node.js framework (TypeScript, ESM)
 - [Prisma 7](https://www.prisma.io/) — ORM with PostgreSQL adapter + connection pooling
-- [Passport.js](http://www.passportjs.org/) — JWT authentication strategy
+- [Passport.js](http://www.passportjs.org/) + [jwks-rsa](https://github.com/auth0/node-jwks-rsa) — verifies Cognito-issued JWTs against the pool's JWKS endpoint
 - [Swagger / OpenAPI](https://swagger.io/) — auto-generated API docs at `/docs`
 - Jest — unit & e2e testing
 
@@ -53,6 +53,7 @@ ECS Tasks (app subnets) → RDS Proxy → RDS PostgreSQL (data subnets, no inter
 - [React 19](https://react.dev/) — UI library
 - [Vite 8](https://vitejs.dev/) — build tool
 - [React Router v7](https://reactrouter.com/) — client-side routing
+- [AWS Amplify Auth](https://docs.amplify.aws/) — Cognito client SDK (email/password + Google/Facebook federation)
 - React Context — auth state management
 - Custom fetch wrapper — API communication
 
@@ -63,7 +64,8 @@ ECS Tasks (app subnets) → RDS Proxy → RDS PostgreSQL (data subnets, no inter
 - **ALB** — HTTPS termination, path-based routing, blue/green traffic shifting
 - **ECR** — private container registry (backend + frontend)
 - **CodeDeploy** — blue/green deployments with auto-rollback
-- **Secrets Manager** — `DATABASE_URL` and `JWT_SECRET` injected at task start
+- **Cognito** — User Pool with hosted domain, App Client for the SPA, Google + Facebook Identity Providers for social login
+- **Secrets Manager** — `DATABASE_URL` injected at task start; `google-oauth` and `facebook-oauth` consumed at `terraform apply` time to configure Cognito IdPs
 - **ACM** — TLS certificate for `*.tooltu.io.vn`
 
 **IaC & CI/CD**
@@ -80,8 +82,8 @@ ECS Tasks (app subnets) → RDS Proxy → RDS PostgreSQL (data subnets, no inter
 .
 ├── backend/               # NestJS API
 │   ├── src/
-│   │   ├── auth/          # Register, login, JWT strategy
-│   │   ├── users/         # User CRUD + bcrypt hashing
+│   │   ├── auth/          # Cognito JWT strategy + guards + user provisioning
+│   │   ├── users/         # User lookup (records auto-provisioned from Cognito on first auth'd request)
 │   │   ├── posts/         # Blog post CRUD + authorization
 │   │   ├── comments/      # Comments on published posts
 │   │   ├── health/        # Database health check
@@ -91,10 +93,11 @@ ECS Tasks (app subnets) → RDS Proxy → RDS PostgreSQL (data subnets, no inter
 │
 ├── frontend/              # React + Vite SPA
 │   ├── src/
-│   │   ├── pages/         # Home, Login, Register, PostDetail, PostForm
+│   │   ├── pages/         # Home, Login, Register, AuthCallback, PostDetail, PostForm
 │   │   ├── components/    # Navbar, PostCard, CommentSection
-│   │   ├── context/       # AuthContext (token + user state)
-│   │   └── api/           # Typed fetch wrappers
+│   │   ├── context/       # AuthContext (wraps Amplify Auth; no manual token storage)
+│   │   ├── lib/           # amplify.ts — Amplify.configure for Cognito pool + OAuth
+│   │   └── api/           # Typed fetch wrappers (inject Cognito access token per request)
 │   ├── nginx.conf         # SPA fallback + /health endpoint
 │   └── Dockerfile         # Multi-stage nginx build
 │
@@ -104,7 +107,8 @@ ECS Tasks (app subnets) → RDS Proxy → RDS PostgreSQL (data subnets, no inter
 │       ├── networking/    # VPC, subnets, NAT, security groups
 │       ├── ecr/           # Container registries + lifecycle policies
 │       ├── rds/           # RDS instance, RDS Proxy, IAM
-│       ├── secrets/       # Secrets Manager entries
+│       ├── secrets/       # Secrets Manager entries (database URL + OAuth creds)
+│       ├── cognito/       # User Pool, hosted domain, App Client, Google/Facebook IdPs
 │       ├── alb/           # Load balancer, listeners, target groups
 │       ├── ecs/           # Cluster, task definitions, services
 │       └── codedeploy/    # Deployment app + deployment groups
@@ -153,6 +157,10 @@ Before deploying, you need:
 - Terraform `1.14.3` installed locally
 - A registered domain with a wildcard ACM certificate (`*.yourdomain.com`) in `ap-southeast-1`
 - A GitHub repository with Actions enabled
+- **Google OAuth 2.0 client** (Google Cloud Console → APIs & Services → Credentials, type: Web application)
+- **Facebook App** with Facebook Login product enabled (Meta for Developers)
+
+Both OAuth apps need the redirect URI `https://<cognito-domain-prefix>.auth.ap-southeast-1.amazoncognito.com/oauth2/idpresponse` — the Cognito hosted domain is created by Terraform, so you'll configure it after the first partial apply (see step 3).
 
 ---
 
@@ -222,7 +230,26 @@ Go to **GitHub → Repository → Settings → Secrets and variables → Actions
 
 ### 3. Deploy Infrastructure
 
-Push any change to `infra/` (or trigger manually):
+The Cognito module reads the Google/Facebook OAuth secrets at plan time, so the order matters on the first apply:
+
+**3a. Create the secrets (targeted apply):**
+
+```bash
+cd infra
+terraform init
+terraform apply -target=module.secrets
+```
+
+This creates `blog-dev/google-oauth` and `blog-dev/facebook-oauth` with `REPLACE_ME` placeholders.
+
+**3b. Populate the OAuth secrets** via the AWS console (Secrets Manager):
+
+- `blog-dev/google-oauth` → `{"client_id":"...","client_secret":"..."}`
+- `blog-dev/facebook-oauth` → `{"app_id":"...","app_secret":"..."}`
+
+The `secrets` module has `lifecycle { ignore_changes = [secret_string] }`, so Terraform will not overwrite these on future applies.
+
+**3c. Full apply:**
 
 ```bash
 git add infra/
@@ -230,7 +257,9 @@ git commit -m "feat: initial infrastructure"
 git push origin main
 ```
 
-GitHub Actions will run `terraform apply` and provision the full AWS environment — VPC, RDS, ALB, ECS cluster, ECR repos, CodeDeploy, and Secrets Manager entries.
+GitHub Actions runs `terraform apply` and provisions the full environment — VPC, RDS, ALB, ECS cluster, ECR repos, CodeDeploy, Cognito (User Pool + hosted domain + Google/Facebook IdPs), and Secrets Manager entries.
+
+**3d. Finalize OAuth apps.** Grab the Cognito hosted domain from `terraform output cognito_user_pool_domain`, then add `https://<domain>/oauth2/idpresponse` as the authorized redirect URI in both the Google OAuth client and the Facebook app.
 
 ### 4. Deploy Applications
 
@@ -254,7 +283,7 @@ blog.yourdomain.com → <alb-dns-name>.ap-southeast-1.elb.amazonaws.com
 ```bash
 # Backend
 cd backend
-cp .env.example .env      # fill in DATABASE_URL, JWT_SECRET
+cp .env.example .env      # fill in DATABASE_URL + COGNITO_REGION / COGNITO_USER_POOL_ID / COGNITO_CLIENT_ID
 npm install
 npx prisma generate
 npm run start:dev          # http://localhost:3000
@@ -262,7 +291,7 @@ npm run start:dev          # http://localhost:3000
 
 # Frontend (separate terminal)
 cd frontend
-cp .env.example .env      # VITE_API_URL=http://localhost:3000/api
+cp .env.example .env      # VITE_API_URL + VITE_COGNITO_USER_POOL_ID / VITE_COGNITO_CLIENT_ID / VITE_COGNITO_DOMAIN
 npm install
 npm run dev               # http://localhost:5173
 ```
@@ -303,9 +332,10 @@ Vite bundles the API URL into the JavaScript at build time. The image is **envir
 
 ECS reads Secrets Manager values only when a new task starts. After rotating or updating a secret, force a new deployment: **ECS → Service → Update → Force new deployment**.
 
-### CodeDeploy and RDS Proxy require a payment method
+### Cognito OAuth secrets must be populated before the full Terraform apply
 
-Both services are unavailable on AWS accounts without a credit card on file, even within free tier limits. Add a payment method under **AWS Console → Account → Payment methods**.
+The `cognito` module reads `blog-dev/google-oauth` and `blog-dev/facebook-oauth` at plan time via `data "aws_secretsmanager_secret_version"`. A full apply fails on a fresh environment unless you first run `terraform apply -target=module.secrets`, populate the JSON values in the console, then run the full apply. After that, `lifecycle { ignore_changes = [secret_string] }` keeps your values safe across future applies.
+
 
 ---
 
@@ -317,16 +347,16 @@ Swagger UI is available at `https://yourdomain.com/docs` after deployment, or at
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `POST` | `/api/auth/register` | — | Create account |
-| `POST` | `/api/auth/login` | — | Login, returns JWT |
 | `GET` | `/api/posts` | — | List published posts |
-| `POST` | `/api/posts` | JWT | Create post (DRAFT) |
-| `PATCH` | `/api/posts/:id` | JWT | Update post (author/admin) |
-| `DELETE` | `/api/posts/:id` | JWT | Delete post (author/admin) |
+| `POST` | `/api/posts` | Cognito | Create post (DRAFT) |
+| `PATCH` | `/api/posts/:id` | Cognito | Update post (author/admin) |
+| `DELETE` | `/api/posts/:id` | Cognito | Delete post (author/admin) |
 | `GET` | `/api/comments?postId=` | — | List comments |
-| `POST` | `/api/comments` | JWT | Add comment |
-| `DELETE` | `/api/comments/:id` | JWT | Delete comment (author/admin) |
+| `POST` | `/api/comments` | Cognito | Add comment |
+| `DELETE` | `/api/comments/:id` | Cognito | Delete comment (author/admin) |
 | `GET` | `/api/health` | — | Database health check |
+
+Authentication is handled entirely by Cognito — there are no `/api/auth/register` or `/api/auth/login` endpoints. The SPA signs users in via Amplify (email/password or Google/Facebook), then sends the Cognito access token as `Authorization: Bearer <jwt>` on protected requests. The backend verifies the token against the pool's JWKS, then upserts a local `User` row keyed by `cognitoSub` on the first authenticated request.
 
 ---
 
@@ -341,6 +371,7 @@ Approximate monthly cost in `ap-southeast-1`, on-demand:
 | RDS Proxy (2 vCPU source) | $22 |
 | ALB + LCU | $21 |
 | ECS Fargate ARM64 (2 tasks × 0.25 vCPU / 0.5 GB) | $14 |
+| Cognito User Pool (< 50k MAU) | Free |
 | Secrets Manager (3 secrets), ECR, CloudWatch, S3/DynamoDB | ~$4 |
 | **Total** | **~$140 / month** |
 
