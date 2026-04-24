@@ -237,9 +237,10 @@ resource "aws_ecs_service" "backend" {
     container_port   = var.backend_port
   }
 
-  # CodeDeploy manages task definition and target group — ignore drift
+  # CodeDeploy manages task definition and target group.
+  # capacity_provider_strategy can drift if Spot is enabled out-of-band — ignore to avoid destroy+recreate.
   lifecycle {
-    ignore_changes = [task_definition, load_balancer]
+    ignore_changes = [task_definition, load_balancer, capacity_provider_strategy]
   }
 
   tags = { Name = "${var.name_prefix}-backend-svc" }
@@ -270,7 +271,7 @@ resource "aws_ecs_service" "frontend" {
   }
 
   lifecycle {
-    ignore_changes = [task_definition, load_balancer]
+    ignore_changes = [task_definition, load_balancer, capacity_provider_strategy]
   }
 
   tags = { Name = "${var.name_prefix}-frontend-svc" }
