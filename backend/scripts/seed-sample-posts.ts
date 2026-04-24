@@ -8,7 +8,6 @@
 
 import 'dotenv/config';
 import { randomUUID } from 'node:crypto';
-import * as bcrypt from 'bcrypt';
 import slugify from 'slugify';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
@@ -22,12 +21,8 @@ if (!databaseUrl) {
 const adapter = new PrismaPg({ connectionString: databaseUrl });
 const prisma = new PrismaClient({ adapter });
 
-const SEED_USER = {
-  email: 'seed@example.com',
-  firstName: 'Demo',
-  lastName: 'Author',
-  passwordPlain: 'Seed123!',
-};
+// Seed requires a pre-existing user (created by signing in once via Cognito).
+// We use the first user in the DB as the author.
 
 const SAMPLE_POSTS: Array<{
   title: string;
@@ -89,33 +84,14 @@ const SAMPLE_POSTS: Array<{
 ];
 
 async function ensureSeedUser() {
-  const existing = await prisma.user.findUnique({
-    where: { email: SEED_USER.email },
-  });
-  if (existing) {
-    return existing;
+  const author = await prisma.user.findFirst();
+  if (!author) {
+    throw new Error(
+      'No users found. Sign in via Cognito at least once (frontend) so a user row is provisioned, then re-run this seed.',
+    );
   }
-
-  const anyUser = await prisma.user.findFirst();
-  if (anyUser) {
-    console.log(`Dùng user hiện có làm tác giả: ${anyUser.email}`);
-    return anyUser;
-  }
-
-  const password = await bcrypt.hash(SEED_USER.passwordPlain, 10);
-  const user = await prisma.user.create({
-    data: {
-      email: SEED_USER.email,
-      firstName: SEED_USER.firstName,
-      lastName: SEED_USER.lastName,
-      password,
-      role: 'ADMIN',
-    },
-  });
-  console.log(
-    `Đã tạo user seed: ${user.email} (mật khẩu: ${SEED_USER.passwordPlain})`,
-  );
-  return user;
+  console.log(`Using existing user as author: ${author.email}`);
+  return author;
 }
 
 async function main() {

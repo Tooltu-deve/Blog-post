@@ -3,8 +3,7 @@ import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { PostsService } from './posts.service.js';
 import { CreatePostDto } from './dto/create-post.dto.js';
 import { UpdatePostDto } from './dto/update-post.dto.js';
-import { JwtAuthGuard } from '../auth/auth.guard.js';
-import { OptionalJwtAuthGuard } from '../auth/optional-jwt.guard.js';
+import { CognitoJwtGuard, OptionalCognitoJwtGuard } from '../auth/cognito-jwt.guard.js';
 
 @ApiTags('posts')
 @Controller('posts')
@@ -17,27 +16,27 @@ export class PostsController {
   }
 
   @Get(':id')
-  @UseGuards(OptionalJwtAuthGuard)
+  @UseGuards(OptionalCognitoJwtGuard)
   findOne(@Param('id') id: string, @Request() req) {
     return this.postsService.findOne(id, req.user?.id);
   }
 
   @Post()
-  @UseGuards(JwtAuthGuard)          // 1. Decorator để apply guard
+  @UseGuards(CognitoJwtGuard)          // 1. Decorator để apply guard
   @ApiBearerAuth()
   create(@Body() dto: CreatePostDto, @Request() req) {
     return this.postsService.create(dto, req.user.id);  // 2. field userId trong JWT payload
   }
 
   @Patch(':id')
-  @UseGuards(JwtAuthGuard)          // 3. Guard
+  @UseGuards(CognitoJwtGuard)          // 3. Guard
   @ApiBearerAuth()
   update(@Param('id') id: string, @Body() dto: UpdatePostDto, @Request() req) {
     return this.postsService.update(id, dto, req.user.id, req.user.role);  // 4 & 5. userId, userRole
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard)          // 6. Guard
+  @UseGuards(CognitoJwtGuard)          // 6. Guard
   @ApiBearerAuth()
   remove(@Param('id') id: string, @Request() req) {
     return this.postsService.delete(id, req.user.id, req.user.role);

@@ -1,10 +1,18 @@
+import { fetchAuthSession } from 'aws-amplify/auth';
+
 const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api';
 
-async function request<T>(
-  path: string,
-  options: RequestInit = {},
-): Promise<T> {
-  const token = localStorage.getItem('token');
+async function getAccessToken(): Promise<string | undefined> {
+  try {
+    const session = await fetchAuthSession();
+    return session.tokens?.accessToken?.toString();
+  } catch {
+    return undefined;
+  }
+}
+
+async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const token = await getAccessToken();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(options.headers as Record<string, string>),

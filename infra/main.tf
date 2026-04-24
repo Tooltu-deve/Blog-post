@@ -96,6 +96,24 @@ module "alb" {
   acm_certificate_arn = var.acm_certificate_arn
 }
 
+module "cognito" {
+  source = "./modules/cognito"
+
+  name_prefix               = local.name_prefix
+  domain_prefix             = var.cognito_domain_prefix
+  google_oauth_secret_arn   = module.secrets.google_oauth_secret_arn
+  facebook_oauth_secret_arn = module.secrets.facebook_oauth_secret_arn
+
+  callback_urls = [
+    "https://${var.domain_name}/auth/callback",
+    "http://localhost:5173/auth/callback",
+  ]
+  logout_urls = [
+    "https://${var.domain_name}/",
+    "http://localhost:5173/",
+  ]
+}
+
 module "ecs" {
   source = "./modules/ecs"
 
@@ -117,12 +135,15 @@ module "ecs" {
 
   # Secrets
   database_url_secret_arn = module.secrets.database_url_secret_arn
-  jwt_secret_arn          = module.secrets.jwt_secret_arn
+
+  # Cognito (backend verifies tokens against this pool)
+  cognito_user_pool_id        = module.cognito.user_pool_id
+  cognito_user_pool_client_id = module.cognito.user_pool_client_id
+  cognito_region              = var.aws_region
 
   # Environment
-  jwt_expire_in = var.jwt_expire_in
-  alb_dns_name  = module.alb.dns_name
-  domain_name   = var.domain_name
+  alb_dns_name = module.alb.dns_name
+  domain_name  = var.domain_name
 
   # Target groups
   backend_target_group_arn  = module.alb.backend_tg_blue_arn

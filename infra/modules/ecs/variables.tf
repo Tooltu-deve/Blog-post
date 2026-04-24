@@ -72,16 +72,21 @@ variable "database_url_secret_arn" {
   type        = string
 }
 
-variable "jwt_secret_arn" {
-  description = "Secrets Manager ARN for JWT_SECRET"
+# ── Environment ─────────────────────────────────────────────
+
+variable "cognito_user_pool_id" {
+  description = "Cognito User Pool ID (backend verifies tokens against this pool)"
   type        = string
 }
 
-# ── Environment ─────────────────────────────────────────────
+variable "cognito_user_pool_client_id" {
+  description = "Cognito App Client ID (used as token audience)"
+  type        = string
+}
 
-variable "jwt_expire_in" {
-  type    = string
-  default = "1h"
+variable "cognito_region" {
+  description = "Region where the Cognito User Pool lives"
+  type        = string
 }
 
 variable "alb_dns_name" {

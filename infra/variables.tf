@@ -88,10 +88,12 @@ variable "frontend_memory" {
   default     = 512
 }
 
-variable "jwt_expire_in" {
-  description = "JWT token expiration"
+# ── Cognito ─────────────────────────────────────────────────
+
+variable "cognito_domain_prefix" {
+  description = "Prefix for Cognito hosted domain — must be globally unique within the region"
   type        = string
-  default     = "1h"
+  default     = "blog-dev-auth-tooltu"
 }
 
 # ── HTTPS ───────────────────────────────────────────────────

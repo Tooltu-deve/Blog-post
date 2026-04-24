@@ -47,3 +47,21 @@ output "frontend_task_definition_arn" {
   description = "Frontend task definition ARN (used by CI/CD)"
   value       = module.ecs.frontend_task_definition_arn
 }
+
+# ── Cognito ─────────────────────────────────────────────────
+# Frontend build pipeline injects these as VITE_* build args.
+
+output "cognito_user_pool_id" {
+  description = "Cognito User Pool ID"
+  value       = module.cognito.user_pool_id
+}
+
+output "cognito_user_pool_client_id" {
+  description = "Cognito App Client ID (frontend Amplify config)"
+  value       = module.cognito.user_pool_client_id
+}
+
+output "cognito_user_pool_domain" {
+  description = "Cognito hosted domain for OAuth redirects"
+  value       = module.cognito.user_pool_domain
+}

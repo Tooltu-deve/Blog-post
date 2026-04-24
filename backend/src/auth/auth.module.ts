@@ -1,25 +1,13 @@
 import { Module } from '@nestjs/common';
-import { AuthService } from './auth.service.js';
-import { AuthController } from './auth.controller.js';
-import { JwtStrategy } from './strategies/jwt.strategy.js';
-import { ConfigService } from '@nestjs/config';
-import { UsersModule } from '../users/users.module.js';
 import { PassportModule } from '@nestjs/passport';
-import { JwtModule } from '@nestjs/jwt';
+import { CognitoJwtStrategy } from './strategies/cognito-jwt.strategy.js';
+import { UserProvisioningService } from './user-provisioning.service.js';
+import { UsersModule } from '../users/users.module.js';
+import { PrismaModule } from '../prisma/prisma.module.js';
 
 @Module({
-  imports: [
-    UsersModule,
-    PassportModule,
-    JwtModule.registerAsync({
-      inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        secret: config.get<string>('JWT_SECRET'),
-        signOptions: { expiresIn: config.get('JWT_EXPIRE_IN', '1h') },
-      }),
-    }),
-  ],
-  providers: [AuthService, JwtStrategy],
-  controllers: [AuthController],
-})  
+  imports: [PassportModule, UsersModule, PrismaModule],
+  providers: [CognitoJwtStrategy, UserProvisioningService],
+  exports: [UserProvisioningService],
+})
 export class AuthModule {}

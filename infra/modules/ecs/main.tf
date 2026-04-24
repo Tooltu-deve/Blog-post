@@ -74,7 +74,6 @@ resource "aws_iam_role_policy" "ecs_execution_secrets" {
       Action = ["secretsmanager:GetSecretValue"]
       Resource = [
         var.database_url_secret_arn,
-        var.jwt_secret_arn,
       ]
     }]
   })
@@ -130,18 +129,16 @@ resource "aws_ecs_task_definition" "backend" {
         name      = "DATABASE_URL"
         valueFrom = var.database_url_secret_arn
       },
-      {
-        name      = "JWT_SECRET"
-        valueFrom = var.jwt_secret_arn
-      },
     ]
 
     # Plaintext environment variables
     environment = [
       { name = "PORT", value = tostring(var.backend_port) },
       { name = "NODE_ENV", value = "production" },
-      { name = "JWT_EXPIRE_IN", value = var.jwt_expire_in },
       { name = "FRONTEND_URL", value = "https://${var.domain_name}" },
+      { name = "COGNITO_USER_POOL_ID", value = var.cognito_user_pool_id },
+      { name = "COGNITO_CLIENT_ID", value = var.cognito_user_pool_client_id },
+      { name = "COGNITO_REGION", value = var.cognito_region },
     ]
 
     # Health check: wget because node:24-alpine has wget but not curl

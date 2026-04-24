@@ -26,11 +26,11 @@ enum Status {
 
 model User {
   id          String    @id @default(uuid())
+  cognitoSub  String    @unique
   email       String    @unique
   firstName   String
   lastName    String
   avatar      String?
-  password    String
   role        Role      @default(USER)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt

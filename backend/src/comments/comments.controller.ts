@@ -2,7 +2,7 @@ import { Controller, Post, Body, Req, Param, Get, Delete, UseGuards, Query } fro
 import { CommentsService } from './comments.service.js';
 import { Comment } from '@prisma/client';
 import { CreateCommentDto } from './dto/create-comment.dto.js';
-import { JwtAuthGuard } from '../auth/auth.guard.js';
+import { CognitoJwtGuard } from '../auth/cognito-jwt.guard.js';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
 @ApiTags('comments')
@@ -11,7 +11,7 @@ export class CommentsController {
     constructor(private readonly commentsService: CommentsService) {}
 
 
-    @UseGuards(JwtAuthGuard)
+    @UseGuards(CognitoJwtGuard)
     @ApiBearerAuth()
     @Post()
     async create(@Body() createCommentDto: CreateCommentDto, @Req() req): Promise<Comment> {
@@ -24,7 +24,7 @@ export class CommentsController {
     }
 
 
-    @UseGuards(JwtAuthGuard)
+    @UseGuards(CognitoJwtGuard)
     @ApiBearerAuth()
     @Delete(':id')
     async delete(@Param('id') id: string, @Req() req): Promise<void> {

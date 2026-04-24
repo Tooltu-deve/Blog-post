@@ -38,11 +38,29 @@ jobs:
       - name: Login to ECR
         uses: aws-actions/amazon-ecr-login@v2
 
+      # Cognito IDs are Terraform outputs — read them so we can bake into the SPA
+      - name: Read Cognito config from Terraform outputs
+        run: |
+          aws ssm get-parameter --name "/unused" >/dev/null 2>&1 || true
+          USER_POOL_ID=$(aws cognito-idp list-user-pools --max-results 60 \
+            --query "UserPools[?Name=='blog-dev-users'].Id | [0]" --output text)
+          CLIENT_ID=$(aws cognito-idp list-user-pool-clients \
+            --user-pool-id "$USER_POOL_ID" \
+            --query "UserPoolClients[?ClientName=='blog-dev-spa'].ClientId | [0]" --output text)
+          DOMAIN_PREFIX=$(aws cognito-idp describe-user-pool --user-pool-id "$USER_POOL_ID" \
+            --query 'UserPool.Domain' --output text)
+          echo "COGNITO_USER_POOL_ID=$USER_POOL_ID" >> $GITHUB_ENV
+          echo "COGNITO_CLIENT_ID=$CLIENT_ID" >> $GITHUB_ENV
+          echo "COGNITO_DOMAIN=${DOMAIN_PREFIX}.auth.${AWS_REGION}.amazoncognito.com" >> $GITHUB_ENV
+
       - name: Build & push Docker image (ARM64)
         run: |
           IMAGE_TAG=${{ github.sha }}
           docker build \
             --build-arg VITE_API_URL=https://${{ vars.DOMAIN_NAME }}/api \
+            --build-arg VITE_COGNITO_USER_POOL_ID=$COGNITO_USER_POOL_ID \
+            --build-arg VITE_COGNITO_CLIENT_ID=$COGNITO_CLIENT_ID \
+            --build-arg VITE_COGNITO_DOMAIN=$COGNITO_DOMAIN \
             -t $ECR_REPO:$IMAGE_TAG \
             frontend/
           docker push $ECR_REPO:$IMAGE_TAG

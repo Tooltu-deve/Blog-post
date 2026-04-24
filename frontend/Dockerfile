@@ -9,10 +9,16 @@ RUN npm ci
 
 COPY . .
 
-# VITE_API_URL is baked into the JS bundle at build time (import.meta.env)
-# Pass via: docker build --build-arg VITE_API_URL=http://alb-dns/api
+# VITE_* are baked into the JS bundle at build time (import.meta.env).
+# Pass via: docker build --build-arg VITE_API_URL=... --build-arg VITE_COGNITO_...
 ARG VITE_API_URL
-ENV VITE_API_URL=$VITE_API_URL
+ARG VITE_COGNITO_USER_POOL_ID
+ARG VITE_COGNITO_CLIENT_ID
+ARG VITE_COGNITO_DOMAIN
+ENV VITE_API_URL=$VITE_API_URL \
+    VITE_COGNITO_USER_POOL_ID=$VITE_COGNITO_USER_POOL_ID \
+    VITE_COGNITO_CLIENT_ID=$VITE_COGNITO_CLIENT_ID \
+    VITE_COGNITO_DOMAIN=$VITE_COGNITO_DOMAIN
 
 RUN npm run build
 
